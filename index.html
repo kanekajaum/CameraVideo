@@ -27,19 +27,20 @@
         <!-- Instruções Específicas para o Kodular -->
         <div class="bg-gradient-to-br from-slate-900 to-purple-950/40 border border-purple-500/30 rounded-2xl p-4 text-sm text-slate-300 shadow-xl">
             <h2 class="font-bold text-white mb-2 flex items-center gap-2 text-base">
-                📱 Configuração no Kodular:
+                📱 Status da Permissão:
             </h2>
-            <ol class="list-decimal list-inside space-y-2 text-slate-300 text-xs leading-relaxed">
-                <li>No designer do Kodular, selecione o <strong class="text-purple-300">Web_Viewer1</strong>.</li>
-                <li>Certifique-se de marcar a opção <strong class="text-purple-300">OverrideWindowOpen</strong>.</li>
-                <li>Nos Blocos do Kodular, adicione o evento <code class="bg-slate-800 px-1 py-0.5 rounded text-purple-300">Web_Viewer1.PermissionRequest</code> para conceder acesso automático à mídia.</li>
-            </ol>
+            <p class="text-xs text-slate-300 leading-relaxed">
+                Ao clicar em <strong class="text-purple-300">Ativar Engine</strong>, o app forçará o pedido de acesso à câmera do sistema para interceptá-lo com o seu vídeo MP4.
+            </p>
         </div>
 
         <!-- Área de Player / Canvas -->
         <div class="relative bg-black rounded-3xl overflow-hidden border border-slate-800 aspect-[9/16] max-h-[320px] flex items-center justify-center shadow-2xl">
             <video id="sourceVideo" class="hidden" loop muted playsinline crossorigin="anonymous"></video>
             <canvas id="outputCanvas" class="w-full h-full object-cover"></canvas>
+
+            <!-- Video Oculto de Teste para forçar o prompt do navegador -->
+            <video id="webcamPreview" autoplay playsinline muted class="hidden"></video>
 
             <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-slate-900/90 backdrop-blur-sm">
                 <svg class="w-14 h-14 text-purple-500/60 mb-3 animate-bounce" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -75,10 +76,10 @@
         <!-- Status Box -->
         <div id="streamInfo" class="hidden bg-purple-950/40 border border-purple-500/30 rounded-xl p-3.5 text-xs text-purple-300 flex flex-col gap-1">
             <span class="font-semibold text-purple-200 flex items-center gap-1">
-                🚀 Engine Ativa no App Nativo!
+                🚀 Engine Ativa e Interceptando!
             </span>
             <p class="text-purple-400/90 leading-relaxed">
-                Qualquer chamada de câmera feita por este WebView agora receberá o seu vídeo em loop em vez da lente física.
+                O navegador foi forçado a abrir o prompt de câmera e agora está injetando o seu vídeo.
             </p>
         </div>
 
@@ -92,6 +93,7 @@
         const videoInput = document.getElementById('videoInput');
         const sourceVideo = document.getElementById('sourceVideo');
         const outputCanvas = document.getElementById('outputCanvas');
+        const webcamPreview = document.getElementById('webcamPreview');
         const placeholder = document.getElementById('placeholder');
         const toggleStreamBtn = document.getElementById('toggleStreamBtn');
         const streamBtnText = document.getElementById('streamBtnText');
@@ -138,17 +140,31 @@
         toggleStreamBtn.addEventListener('click', async () => {
             if (!isStreaming) {
                 try {
+                    // 1. FORÇA O NAVEGADOR A CHAMAR A PERMISSÃO DE CÂMERA REAL PRIMEIRO
+                    if (originalGetUserMedia) {
+                        try {
+                            // Isso obriga o PC ou o Android a exibir a caixinha de "Permitir Câmera"
+                            const realStream = await originalGetUserMedia({ video: true, audio: false });
+                            webcamPreview.srcObject = realStream;
+                            // Paramos imediatamente a câmera real para liberar o hardware e usar só o nosso stream virtual
+                            realStream.getTracks().forEach(track => track.stop());
+                        } catch (permError) {
+                            console.warn("Aviso: Permissão de câmera negada ou ignorada pelo sistema:", permError);
+                        }
+                    }
+
+                    // 2. Inicia o vídeo MP4 selecionado
                     await sourceVideo.play();
                     renderLoop();
 
-                    // Cria o stream de vídeo virtual direto do Canvas
+                    // 3. Cria o stream virtual baseado no Canvas rodando o MP4
                     virtualMediaStream = outputCanvas.captureStream(30);
 
-                    // Sobrescreve o getUserMedia para enganar qualquer script/app que tente abrir a câmera
+                    // 4. Sobrescreve o getUserMedia do navegador para entregar o nosso vídeo no lugar da câmera
                     if (navigator.mediaDevices) {
                         navigator.mediaDevices.getUserMedia = async (constraints) => {
                             if (constraints && constraints.video) {
-                                console.log("Kodular Bridge: Retornando vídeo virtual.");
+                                console.log("Kodular Bridge: Injetando MP4 no lugar da câmera.");
                                 return virtualMediaStream;
                             }
                             if (originalGetUserMedia) {
@@ -168,6 +184,7 @@
 
                 } catch (error) {
                     console.error("Erro ao ativar stream:", error);
+                    alert("Erro ao ativar a câmera virtual: " + error.message);
                 }
             } else {
                 cancelAnimationFrame(animationFrameId);
