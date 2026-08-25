@@ -27,13 +27,12 @@
         <!-- Instruções Específicas para o Kodular -->
         <div class="bg-gradient-to-br from-slate-900 to-purple-950/40 border border-purple-500/30 rounded-2xl p-4 text-sm text-slate-300 shadow-xl">
             <h2 class="font-bold text-white mb-2 flex items-center gap-2 text-base">
-                📱 Como usar no Kodular para criar seu próprio App:
+                📱 Configuração no Kodular:
             </h2>
             <ol class="list-decimal list-inside space-y-2 text-slate-300 text-xs leading-relaxed">
-                <li>Crie um projeto novo no <strong class="text-purple-300">Kodular</strong>.</li>
-                <li>Arraste um componente <strong class="text-purple-300">WebViewer</strong> para a tela (defina Altura e Largura como <em>Fill Parent</em>).</li>
-                <li>Marque a propriedade <strong class="text-purple-300">OverrideWindowOpen</strong> e permita permissões de mídia.</li>
-                <li>Hospede este arquivo HTML online (ex: GitHub Pages, Netlify ou Vercel) e cole o link no WebViewer do Kodular, ou carregue-o como arquivo local do projeto.</li>
+                <li>No designer do Kodular, selecione o <strong class="text-purple-300">Web_Viewer1</strong>.</li>
+                <li>Certifique-se de marcar a opção <strong class="text-purple-300">OverrideWindowOpen</strong>.</li>
+                <li>Nos Blocos do Kodular, adicione o evento <code class="bg-slate-800 px-1 py-0.5 rounded text-purple-300">Web_Viewer1.PermissionRequest</code> para conceder acesso automático à mídia.</li>
             </ol>
         </div>
 
@@ -47,11 +46,11 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.75 3.75 0 0118 19.5H6.75z"></path>
                 </svg>
                 <p class="text-sm font-semibold text-white mb-1">Selecione o Vídeo da Live</p>
-                <p class="text-xs text-slate-400">Escolha o arquivo MP4 que vai rodar em loop infinito</p>
+                <p class="text-xs text-slate-400">Escolha o arquivo MP4 que vai substituir sua câmera</p>
             </div>
 
             <div id="liveBadge" class="absolute top-4 left-4 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full hidden items-center gap-1.5 shadow-lg">
-                <span class="w-2 h-2 rounded-full bg-white animate-ping"></span> TRANSMISSÃO VIRTUAL ATIVA
+                <span class="w-2 h-2 rounded-full bg-white animate-ping"></span> CÂMERA VIRTUAL ATIVA
             </div>
         </div>
 
@@ -76,10 +75,10 @@
         <!-- Status Box -->
         <div id="streamInfo" class="hidden bg-purple-950/40 border border-purple-500/30 rounded-xl p-3.5 text-xs text-purple-300 flex flex-col gap-1">
             <span class="font-semibold text-purple-200 flex items-center gap-1">
-                🚀 Engine Pronta para o App Nativo!
+                🚀 Engine Ativa no App Nativo!
             </span>
             <p class="text-purple-400/90 leading-relaxed">
-                O fluxo de vídeo agora está sendo gerado via Stream contínuo em loop. Pronto para uso no WebViewer do Kodular.
+                Qualquer chamada de câmera feita por este WebView agora receberá o seu vídeo em loop em vez da lente física.
             </p>
         </div>
 
@@ -142,12 +141,14 @@
                     await sourceVideo.play();
                     renderLoop();
 
+                    // Cria o stream de vídeo virtual direto do Canvas
                     virtualMediaStream = outputCanvas.captureStream(30);
 
+                    // Sobrescreve o getUserMedia para enganar qualquer script/app que tente abrir a câmera
                     if (navigator.mediaDevices) {
                         navigator.mediaDevices.getUserMedia = async (constraints) => {
                             if (constraints && constraints.video) {
-                                console.log("Kodular Bridge: Retornando vídeo em loop simulando câmera.");
+                                console.log("Kodular Bridge: Retornando vídeo virtual.");
                                 return virtualMediaStream;
                             }
                             if (originalGetUserMedia) {
